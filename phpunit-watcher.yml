@@ -1,0 +1,2 @@
+phpunit:
+  binary: vendor/bin/phpunit
