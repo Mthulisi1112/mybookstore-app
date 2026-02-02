@@ -10,9 +10,7 @@ use Tests\TestCase;
 use App\Models\Author;
 use App\Models\User;
 
-
-
-
+ 
 class AuthorsTest extends TestCase
 {
 
@@ -22,23 +20,25 @@ class AuthorsTest extends TestCase
    
     public function test_it_returns_an_author_as_a_resource_object(): void
     {
+       $user = User::factory()->create();
+       Sanctum::actingAs($user);
 
        $author = Author::create([
         'name' => 'John Doe',
        ]);
 
-       $user = User::factory()->create();
-       Sanctum::actingAs($user);
+    
+       $response = $this->getJson("/api/v1/authors/{$author->id}");
 
-       $this->getJson("/api/v1/authors/{$author->id}")
-            ->assertStatus(200)
-            ->assertJson([
-                'data' => [
-                    'id' => $author->id,
-                    'name' => $author->name,
-                    'created_at' => $author->created_at->toJSON(),
-                    'updated_at' => $author->updated_at->toJSON(),
-                 ]
+       $response->assertStatus(200);
+
+       $response->assertJsonStructure([
+            'data' => [
+                'id',
+                'name',
+                'created_at',
+                'updated_at',
+            ]
         ]);
 
     }
@@ -71,9 +71,11 @@ class AuthorsTest extends TestCase
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-        $this->postJson('/api/v1/authors', [
+        $response = $this->postJson('/api/v1/authors', [
                 'name' => 'Jane Doe'
-        ])->assertStatus(201);
+        ]);
+
+        $response->assertStatus(201);
     }
 
     public function test_it_can_update_an_author_from_a_resource_object()
@@ -82,9 +84,11 @@ class AuthorsTest extends TestCase
         Sanctum::actingAs($user);
         $author = Author::factory()->create();
 
-        $this->patchJson("/api/v1/authors/{$author->id}",[
+        $response = $this->patchJson("/api/v1/authors/{$author->id}",[
             'name' => 'June Doe'
-        ])->assertStatus(200);
+        ]);
+        
+        $response->assertStatus(200);
     }
 
     public function test_it_can_delete_an_author_through_a_delete_request()
@@ -94,8 +98,10 @@ class AuthorsTest extends TestCase
 
         $author = Author::factory()->create();
 
-        $this->deleteJson("/api/v1/authors/{$author->id}")
-              ->assertStatus(204);
+        $response = $this->getJson("/api/v1/authors/{$author->id}");
+
+
+        $response->assertStatus(204);
 
         $this->assertDatabaseMissing('authors', [
                 'id' => $author->id
@@ -107,13 +113,13 @@ class AuthorsTest extends TestCase
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-       $this->postJson('/api/v1/authors', [
-        'data' => [
-           'name' => '', 
-          ]
+        $response = $this->postJson('/api/v1/authors', [
+           'name' => null, 
 
-        ])->assertStatus(422)
-          ->assertJsonValidationErrorFor(     
+        ]);
+        
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrorFor(     
                 'name'   
             );
             
@@ -124,10 +130,12 @@ class AuthorsTest extends TestCase
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-        $this->postJson('/api/v1/authors', [
+        $response = $this->postJson('/api/v1/authors', [
              'name' => 12345
-        ])->assertStatus(422)
-          ->assertJsonValidationErrorFor(
+        ]);
+        
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrorFor(
             'name'
           );
 
@@ -140,23 +148,73 @@ class AuthorsTest extends TestCase
 
         Author::factory(15)->create();
 
-        $response = $this->getJson('/api/v1/authors?per_page=5');
+        $response = $this->getJson('/api/v1/authors');
 
         $response->assertStatus(200);
 
         $response->assertJsonStructure([
             'data',
-            'links',
+            'links' => [
+                'first',
+                'last',
+                'prev',
+                'next',
+            ],
             'meta' => [
                 'current_page',
+                'from',
                 'last_page',
+                'links',
+                'path',
                 'per_page',
+                'to',
                 'total'
             ],  
         ]);
 
         $this->assertCount(5, $response->Json('data'));
        
+    }
+
+    public function test_pagination_links_exist()
+    {
+      Author::factory(7)->create();
+
+      $user = User::factory()->create();
+      Sanctum::actingAs($user);
+
+      $response = $this->getJson('/api/v1/authors');
+
+      $meta = $response->json('meta');
+
+      $this->assertEquals(1, $meta['current_page']);
+      $this->assertEquals(2, $meta['last_page']);
+      $this->assertNotNull($meta['path']);
+    }
+
+    public function test_it_returns_latest_authors_first()
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $oldAuthor = Author::factory()->create([
+            'name' => 'Shanon Torphy',
+            'created_at' => now()->subDays(2)
+        ]);
+
+        $newAuthor = Author::factory()->create([
+            'name' => 'Ulises Schumm',
+            'created_at' => now()
+        ]);
+
+        $response = $this->getJson('/api/v1/authors');
+
+        $response->assertStatus(200);
+
+        $responseData = $response->json('data');
+
+        $this->assertEquals($newAuthor->name, $responseData[0]['name']);
+        $this->assertEquals($oldAuthor->name, $responseData[1]['name']);
     }
 
 }

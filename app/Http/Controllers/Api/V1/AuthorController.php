@@ -18,10 +18,7 @@ class AuthorController extends Controller
      */
     public function index( Author $author)
     {
-        $authors = Author::orderBy(
-            request('sort', 'id'),
-            request('direction', 'asc')
-        )->paginate(request('per_page', 5));
+        $authors = Author::latest()->paginate(5);
 
         return new AuthorCollection($authors);
     }
@@ -31,12 +28,15 @@ class AuthorController extends Controller
      */
     public function store(StoreAuthorRequest $request )
     {
-       return new AuthorResource(Author::create($request->validated()));
+        $author = Author::create($request->validated());
+         
+        return new AuthorResource($author);
     }
 
     /**
      * Display the specified resource.
      */
+
     public function show(Author $author)
     {
         return new AuthorResource($author);

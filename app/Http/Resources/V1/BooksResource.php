@@ -20,7 +20,11 @@ class BooksResource extends JsonResource
             'description' => $this->description,
             'publication_year' => $this->publication_year,
             'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at
+            'updated_at' => $this->updated_at,
+
+            'authors' => AuthorResource::collection(
+             $this->whenLoaded('authors', collect()))
+   
         ];
     }
 }

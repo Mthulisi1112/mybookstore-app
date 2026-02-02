@@ -17,7 +17,7 @@ class BookController extends Controller
      */
     public function index()
     {
-        $books = Book::all();
+        $books = Book::with('authors')->latest()->paginate(5);
 
         return new BooksCollection($books);
     }
@@ -27,7 +27,9 @@ class BookController extends Controller
      */
     public function store(StoreBookRequest $request)
     {
-        return new BooksResource($request->validated());
+        $book = Book::create($request->validated());   
+
+        return new BooksResource($book);
     }
 
     /**
@@ -35,6 +37,8 @@ class BookController extends Controller
      */
     public function show(Book $book)
     {
+        $book->load('authors');
+
         return new BooksResource($book);
     }
   

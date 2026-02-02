@@ -23,7 +23,7 @@ class UpdateBookRequest extends FormRequest
     {
         return [
             'title' => ['sometimes', 'required', 'string'],
-            'description' => ['sometimes', 'required', 'text'],
+            'description' => ['sometimes', 'required', 'string'],
             'publication_year' => ['sometimes', 'required', 'string']
         ];
     }

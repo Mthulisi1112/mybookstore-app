@@ -23,7 +23,7 @@ class StoreBookRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string'],
-            'description' => ['required', 'text'],
+            'description' => ['required', 'string'],
             'publication_year' => ['required', 'string']
         ];
     }
